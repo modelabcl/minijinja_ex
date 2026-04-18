@@ -2,6 +2,8 @@
 name = "minijinja_ex"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Elixir NIF for minijinja template engine"
 
 [lib]
 name = "minijinja_ex"

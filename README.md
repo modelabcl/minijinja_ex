@@ -1,6 +1,8 @@
 # MinijinjaEx
 
-Elixir wrapper for [minijinja](https://github.com/mitsuhiko/minijinja), a minimal template engine written in Rust.
+Elixir wrapper for [minijinja](https://github.com/mitsuhiko/minijinja), a minimal template engine written in Rust by Armin Ronacher.
+
+This project is licensed under MIT. The underlying minijinja library is licensed under Apache 2.0.
 
 ## Installation
 

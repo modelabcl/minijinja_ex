@@ -5,9 +5,13 @@ defmodule MinijinjaEx.MixProject do
     [
       app: :minijinja_ex,
       version: "0.1.0",
-      elixir: "~> 1.20-rc",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package(),
+      description: "Elixir wrapper for minijinja template engine using Rustler",
+      source_url: "https://github.com/modelabcl/minijinja_ex",
+      homepage_url: "https://github.com/modelabcl/minijinja_ex"
     ]
   end
 
@@ -20,6 +24,27 @@ defmodule MinijinjaEx.MixProject do
   defp deps do
     [
       {:rustler, "~> 0.35.0", runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      name: "minijinja_ex",
+      licenses: ["MIT", "Apache-2.0"],
+      links: %{
+        "GitHub" => "https://github.com/modelabcl/minijinja_ex",
+        "minijinja" => "https://github.com/mitsuhiko/minijinja"
+      },
+      files: [
+        "lib",
+        "native/minijinja_ex/src",
+        "native/minijinja_ex/Cargo.toml",
+        "native/minijinja_ex/Cargo.lock",
+        ".rustler.toml",
+        "mix.exs",
+        "README.md",
+        "LICENSE"
+      ]
     ]
   end
 end
