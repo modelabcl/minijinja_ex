@@ -11,7 +11,11 @@ defmodule MinijinjaEx.MixProject do
       package: package(),
       description: "Elixir wrapper for minijinja template engine using Rustler",
       source_url: "https://github.com/modelabcl/minijinja_ex",
-      homepage_url: "https://github.com/modelabcl/minijinja_ex"
+      homepage_url: "https://github.com/modelabcl/minijinja_ex",
+      docs: [
+        main: "MinijinjaEx",
+        extras: ["README.md"]
+      ]
     ]
   end
 
@@ -23,7 +27,8 @@ defmodule MinijinjaEx.MixProject do
 
   defp deps do
     [
-      {:rustler, "~> 0.35.0", runtime: false}
+      {:rustler, "~> 0.35.0", runtime: false},
+      {:ex_doc, "~> 0.40.1", only: :dev, runtime: false}
     ]
   end
 
