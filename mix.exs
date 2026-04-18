@@ -30,7 +30,7 @@ defmodule MinijinjaEx.MixProject do
   defp package do
     [
       name: "minijinja_ex",
-      licenses: ["MIT", "Apache-2.0"],
+      licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => "https://github.com/modelabcl/minijinja_ex",
         "minijinja" => "https://github.com/mitsuhiko/minijinja"

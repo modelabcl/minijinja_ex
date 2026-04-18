@@ -2,7 +2,7 @@
 
 Elixir wrapper for [minijinja](https://github.com/mitsuhiko/minijinja), a minimal template engine written in Rust by Armin Ronacher.
 
-This project is licensed under MIT. The underlying minijinja library is licensed under Apache 2.0.
+Licensed under Apache License 2.0.
 
 ## Installation
 
@@ -215,4 +215,6 @@ Undefined variables render as empty strings (not errors):
 
 ## License
 
-MIT
+Apache License 2.0
+
+This project is a wrapper for minijinja by Armin Ronacher, also licensed under Apache 2.0.
