@@ -1,8 +1,12 @@
 # MinijinjaEx
 
-Elixir wrapper for [minijinja](https://github.com/mitsuhiko/minijinja), a minimal template engine written in Rust by Armin Ronacher.
+[![Hex Version](https://img.shields.io/hexpm/v/minijinja_ex.svg)](https://hex.pm/packages/minijinja_ex)
+[![Hex Downloads](https://img.shields.io/hexpm/dt/minijinja_ex.svg)](https://hex.pm/packages/minijinja_ex)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs.pm-blue.svg)](https://hexdocs.pm/minijinja_ex)
+[![CI](https://github.com/modelabcl/minijinja_ex/actions/workflows/release.yml/badge.svg)](https://github.com/modelabcl/minijinja_ex/actions/workflows/release.yml)
+[![License](https://img.shields.io/hexpm/l/minijinja_ex.svg)](https://hex.pm/packages/minijinja_ex)
 
-Licensed under Apache License 2.0.
+Elixir wrapper for [minijinja](https://github.com/mitsuhiko/minijinja), a minimal template engine written in Rust by Armin Ronacher.
 
 ## Installation
 
