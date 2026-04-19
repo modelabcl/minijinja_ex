@@ -17,6 +17,13 @@ defmodule MinijinjaEx.MixProject do
       docs: [
         main: "MinijinjaEx",
         extras: ["README.md"]
+      ],
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
       ]
     ]
   end
@@ -31,7 +38,8 @@ defmodule MinijinjaEx.MixProject do
     [
       {:rustler_precompiled, "~> 0.9"},
       {:rustler, "~> 0.35", optional: true},
-      {:ex_doc, "~> 0.40.1", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.40.1", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 

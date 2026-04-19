@@ -4,6 +4,7 @@
 [![Hex Downloads](https://img.shields.io/hexpm/dt/minijinja_ex.svg)](https://hex.pm/packages/minijinja_ex)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs.pm-blue.svg)](https://hexdocs.pm/minijinja_ex)
 [![CI](https://github.com/modelabcl/minijinja_ex/actions/workflows/release.yml/badge.svg)](https://github.com/modelabcl/minijinja_ex/actions/workflows/release.yml)
+[![Coverage Status](https://coveralls.io/repos/github/modelabcl/minijinja_ex/badge.svg)](https://coveralls.io/github/modelabcl/minijinja_ex)
 [![License](https://img.shields.io/hexpm/l/minijinja_ex.svg)](https://hex.pm/packages/minijinja_ex)
 
 Elixir wrapper for [minijinja](https://github.com/mitsuhiko/minijinja), a minimal template engine written in Rust by Armin Ronacher.

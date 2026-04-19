@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test with coverage
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18"
+          otp-version: "27"
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile
+        env:
+          MINIJINJA_EX_BUILD: "1"
+
+      - name: Run tests with coverage
+        run: mix coveralls.github
+        env:
+          MINIJINJA_EX_BUILD: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
