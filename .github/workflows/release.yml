@@ -2,7 +2,6 @@ name: Build precompiled NIFs
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
 
 jobs:
@@ -11,8 +10,6 @@ jobs:
     runs-on: ${{ matrix.job.os }}
     permissions:
       contents: write
-      id-token: write
-      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -25,20 +22,23 @@ jobs:
           - { target: x86_64-unknown-linux-musl, os: ubuntu-22.04, use-cross: true }
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Extract version
+      - name: Extract project version
         shell: bash
         run: |
-          VERSION=$(grep 'version:' mix.exs | head -1 | sed 's/.*version: "\([^"]*\)".*/\1/')
+          VERSION=$(sed -n 's/^  @version "\(.*\)"/\1/p' mix.exs | head -n1)
           echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.job.target }}
 
-      - uses: philss/rustler-precompiled-action@v1.1.5
+      - name: Build the project
         id: build
+        uses: philss/rustler-precompiled-action@v1.1.5
         with:
           project-name: minijinja_ex
           project-version: ${{ env.PROJECT_VERSION }}
@@ -47,12 +47,15 @@ jobs:
           use-cross: ${{ matrix.job.use-cross }}
           project-dir: "native/minijinja_ex"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.build.outputs.file-name }}
           path: ${{ steps.build.outputs.file-path }}
+          overwrite: true
 
-      - uses: softprops/action-gh-release@v2
+      - name: Release
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ steps.build.outputs.file-path }}
