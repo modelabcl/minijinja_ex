@@ -11,16 +11,17 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:minijinja_ex, "~> 0.1.0"}
+    {:minijinja_ex, "~> 0.1"}
   ]
 end
 ```
 
 Precompiled binaries are available for:
-- macOS (arm64, x86_64)
-- Linux (arm64, x86_64, gnu and musl)
+- macOS arm64 (Apple Silicon)
+- Linux arm64 (gnu)
+- Linux x86_64 (gnu and musl)
 
-No Rust installation required for most platforms.
+Intel macOS users need to build from source. No Rust installation required for supported platforms.
 
 ### Force Build from Source
 
