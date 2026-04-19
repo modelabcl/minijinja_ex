@@ -30,9 +30,11 @@ jobs:
         run: mix compile
         env:
           MINIJINJA_EX_BUILD: "1"
+          MIX_ENV: test
 
       - name: Run tests with coverage
         run: mix coveralls.github
         env:
           MINIJINJA_EX_BUILD: "1"
+          MIX_ENV: test
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
