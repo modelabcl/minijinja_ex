@@ -16,7 +16,6 @@ jobs:
         nif: ["2.15"]
         job:
           - { target: aarch64-apple-darwin, os: macos-14 }
-          - { target: x86_64-apple-darwin, os: macos-15-large }
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04, use-cross: true }
           - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
           - { target: x86_64-unknown-linux-musl, os: ubuntu-22.04, use-cross: true }
@@ -59,3 +58,68 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ steps.build.outputs.file-path }}
+
+  publish:
+    name: Generate checksums and publish to hex.pm
+    needs: build_release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Extract project version
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^  @version "\(.*\)"/\1/p' mix.exs | head -n1)
+          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Download all NIF artifacts from release
+        shell: bash
+        run: |
+          VERSION=${{ env.PROJECT_VERSION }}
+          mkdir -p artifacts
+          
+          for target in aarch64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu x86_64-unknown-linux-musl; do
+            file="libminijinja_ex-v${VERSION}-nif-2.15-${target}.so.tar.gz"
+            url="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/${file}"
+            curl -sLo "artifacts/${file}" "${url}"
+          done
+
+      - name: Generate checksum file
+        shell: bash
+        run: |
+          VERSION=${{ env.PROJECT_VERSION }}
+          echo '%{' > checksum-Elixir.MinijinjaEx.NIF.exs
+          
+          for f in artifacts/*.tar.gz; do
+            checksum=$(sha256sum "$f" | cut -d' ' -f1)
+            filename=$(basename "$f")
+            echo "  \"${filename}\" => \"sha256:${checksum}\"," >> checksum-Elixir.MinijinjaEx.NIF.exs
+          done
+          
+          echo '}' >> checksum-Elixir.MinijinjaEx.NIF.exs
+
+      - name: Commit and push checksums
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add checksum-Elixir.MinijinjaEx.NIF.exs
+          git commit -m "Add checksums for v${{ env.PROJECT_VERSION }}"
+          git push origin HEAD:main
+
+      - name: Install Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18"
+          otp-version: "27"
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Publish to hex.pm
+        run: mix hex.publish --yes
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
