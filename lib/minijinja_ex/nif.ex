@@ -1,9 +1,14 @@
 defmodule MinijinjaEx.NIF do
   @moduledoc false
 
-  use Rustler,
+  version = Mix.Project.config()[:version]
+
+  use RustlerPrecompiled,
     otp_app: :minijinja_ex,
-    crate: :minijinja_ex
+    crate: "minijinja_ex",
+    base_url: "https://github.com/modelabcl/minijinja_ex/releases/download/v#{version}",
+    force_build: System.get_env("MINIJINJA_EX_BUILD") in ["1", "true"],
+    version: version
 
   @spec render_string(String.t(), map()) :: String.t() | {:error, String.t()}
   def render_string(_template_source, _context), do: :erlang.nif_error(:nif_not_loaded)

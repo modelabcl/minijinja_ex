@@ -1,10 +1,12 @@
 defmodule MinijinjaEx.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :minijinja_ex,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -27,7 +29,8 @@ defmodule MinijinjaEx.MixProject do
 
   defp deps do
     [
-      {:rustler, "~> 0.35.0", runtime: false},
+      {:rustler_precompiled, "~> 0.9"},
+      {:rustler, "~> 0.35", optional: true},
       {:ex_doc, "~> 0.40.1", only: :dev, runtime: false}
     ]
   end
@@ -42,9 +45,10 @@ defmodule MinijinjaEx.MixProject do
       },
       files: [
         "lib",
+        "native/minijinja_ex/.cargo",
         "native/minijinja_ex/src",
-        "native/minijinja_ex/Cargo.toml",
-        "native/minijinja_ex/Cargo.lock",
+        "native/minijinja_ex/Cargo*",
+        "checksum-*.exs",
         ".rustler.toml",
         "mix.exs",
         "README.md",

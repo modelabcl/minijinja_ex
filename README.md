@@ -16,6 +16,21 @@ def deps do
 end
 ```
 
+Precompiled binaries are available for:
+- macOS (arm64, x86_64)
+- Linux (arm64, x86_64, gnu and musl)
+
+No Rust installation required for most platforms.
+
+### Force Build from Source
+
+If you need to build from source (e.g., unsupported platform):
+
+```bash
+export MINIJINJA_EX_BUILD=1
+mix deps.compile minijinja_ex
+```
+
 ## Usage
 
 ### Direct Rendering

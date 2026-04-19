@@ -30,3 +30,6 @@ minijinja_ex-*.tar
 *.so
 *.dylib
 
+# Tool versions (local)
+.tool-versions
+
