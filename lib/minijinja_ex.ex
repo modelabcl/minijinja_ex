@@ -14,7 +14,7 @@ defmodule MinijinjaEx do
 
       # Direct rendering
       {:ok, result} = MinijinjaEx.render_string("Hello {{ name }}!", %{"name" => "World"})
-      
+
       # Environment-based
       env = MinijinjaEx.new_env(trim_blocks: true)
       env = MinijinjaEx.add_template!(env, "greeting", "Hello {{ name }}!")
@@ -125,7 +125,7 @@ defmodule MinijinjaEx do
 
   """
   @spec render(env(), String.t(), map()) :: render_result()
-  def render(%__MODULE__{reference: ref}, name, context) do
+  def render(%__MODULE__{reference: ref} = _env, name, context) do
     case NIF.env_render_template(ref, name, context) do
       result when is_binary(result) -> {:ok, result}
       {:error, msg} -> {:error, parse_error(msg)}
@@ -182,7 +182,7 @@ defmodule MinijinjaEx do
 
   """
   @spec render_string(env(), String.t(), map()) :: render_result()
-  def render_string(%__MODULE__{reference: ref}, template, context) do
+  def render_string(%__MODULE__{reference: ref} = _env, template, context) do
     case NIF.env_render_str(ref, template, context) do
       result when is_binary(result) -> {:ok, result}
       {:error, msg} -> {:error, parse_error(msg)}
