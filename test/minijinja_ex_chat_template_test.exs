@@ -51,6 +51,28 @@ defmodule MinijinjaEx.ChatTemplateTest do
     ]
   end
 
+  defp tools_html do
+    [
+      %{
+        "type" => "function",
+        "function" => %{
+          "name" => "html_tool",
+          "description" => "Supports <b>bold</b> & 'quoted' text > threshold",
+          "parameters" => %{
+            "type" => "object",
+            "properties" => %{
+              "query" => %{
+                "type" => "string",
+                "description" => "Search query with <special> & 'chars'"
+              }
+            },
+            "required" => ["query"]
+          }
+        }
+      }
+    ]
+  end
+
   defp tool_call_messages do
     [
       %{"role" => "user", "content" => "What is the weather in Paris?"},
@@ -218,6 +240,33 @@ defmodule MinijinjaEx.ChatTemplateTest do
 
       result = render_str(env, tmpl, ctx)
       expected = load_expected("qwen3", "tools_gen0.txt")
+      assert result == expected
+    end
+
+    # tojson must not HTML-escape <, >, &, ' (matching transformers behavior).
+    test "tojson does not HTML-escape < > & ' in tool definitions, add_generation_prompt: true",
+         %{env: env, tmpl: tmpl} do
+      ctx = %{
+        "messages" => tool_call_messages(),
+        "add_generation_prompt" => true,
+        "tools" => tools_html()
+      }
+
+      result = render_str(env, tmpl, ctx)
+      expected = load_expected("qwen3", "tools_html_gen1.txt")
+      assert result == expected
+    end
+
+    test "tojson does not HTML-escape < > & ' in tool definitions, add_generation_prompt: false",
+         %{env: env, tmpl: tmpl} do
+      ctx = %{
+        "messages" => tool_call_messages(),
+        "add_generation_prompt" => false,
+        "tools" => tools_html()
+      }
+
+      result = render_str(env, tmpl, ctx)
+      expected = load_expected("qwen3", "tools_html_gen0.txt")
       assert result == expected
     end
   end

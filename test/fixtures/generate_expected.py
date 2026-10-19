@@ -4,19 +4,22 @@ Generate expected outputs for HuggingFace chat-template tests.
 Usage:
     uv run --with jinja2 python -I generate_expected.py
 
-This script applies each chat template using Jinja2 (the same engine that
-the transformers library uses) and writes the expected strings to JSON files.
+This script applies each chat template using a Jinja2 environment configured
+to match transformers' apply_chat_template behavior:
+
+- tojson overridden with json.dumps(ensure_ascii=False, sort_keys=True)
+  No HTML escaping (matching transformers). Keys are sorted alphabetically
+  because serde_json (used by the Rust NIF) uses BTreeMap for Object by
+  default. Elixir small maps also iterate in alphabetical term order, so
+  both sides produce consistent alphabetical key order. Transformers uses
+  sort_keys=False (insertion order), so key ordering differs from the
+  canonical transformers output for maps with non-alphabetical insertion
+  order — see README.
+- trim_blocks and lstrip_blocks enabled
+- raise_exception and strftime_now globals added
 
 For strftime_now, a fixed date (2024-07-26) is injected so tests are
-deterministic. The Llama 3.2 template checks `if not date_string is defined`
-before calling strftime_now, so passing date_string directly also works;
-both approaches are tested.
-
-Note on tojson HTML escaping:
-    Jinja2's tojson escapes <, >, &, and ' as unicode escapes (< etc.).
-    minijinja's tojson does NOT HTML-escape. All tool definitions in these
-    fixtures use only ASCII characters that are safe in both renderers, so
-    the outputs are byte-for-byte identical.
+deterministic.
 """
 
 import datetime
@@ -32,12 +35,21 @@ EXPECTED_DIR = os.path.join(FIXTURES_DIR, "expected")
 FIXED_DATE = datetime.datetime(2024, 7, 26)
 
 
-def make_env(extra_globals=None):
+def make_env():
     env = SandboxedEnvironment(
         trim_blocks=True,
         lstrip_blocks=True,
         keep_trailing_newline=False,
     )
+
+    def tojson(x, ensure_ascii=False, indent=None, separators=None, sort_keys=True):
+        # Match transformers' behavior: no HTML escaping, ensure_ascii=False.
+        # sort_keys=True here because the Rust NIF uses serde_json (BTreeMap)
+        # which sorts alphabetically. Elixir small maps also iterate in term
+        # order (alphabetical for string keys). Transformers uses sort_keys=False,
+        # so canonical transformers output for unsorted dicts will differ.
+        return json.dumps(x, ensure_ascii=ensure_ascii, indent=indent,
+                          separators=separators, sort_keys=sort_keys)
 
     def raise_exception(message):
         raise Exception(message)
@@ -45,10 +57,9 @@ def make_env(extra_globals=None):
     def strftime_now(fmt):
         return FIXED_DATE.strftime(fmt)
 
+    env.filters["tojson"] = tojson
     env.globals["raise_exception"] = raise_exception
     env.globals["strftime_now"] = strftime_now
-    if extra_globals:
-        env.globals.update(extra_globals)
     return env
 
 
@@ -97,6 +108,27 @@ TOOLS = [
                     }
                 },
                 "required": ["location"],
+            },
+        },
+    }
+]
+
+# Tool with HTML-unsafe characters to verify no escaping occurs.
+TOOLS_HTML = [
+    {
+        "type": "function",
+        "function": {
+            "name": "html_tool",
+            "description": "Supports <b>bold</b> & 'quoted' text > threshold",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query with <special> & 'chars'",
+                    }
+                },
+                "required": ["query"],
             },
         },
     }
@@ -156,6 +188,7 @@ def generate_qwen3():
         ("multiturn", MULTITURN, {}),
         ("assistant_last", ASSISTANT_LAST, {}),
         ("tools", TOOL_CALL_MESSAGES, {"tools": TOOLS}),
+        ("tools_html", TOOL_CALL_MESSAGES, {"tools": TOOLS_HTML}),
     ]:
         for add_gen in [True, False]:
             ctx = {"messages": msgs, "add_generation_prompt": add_gen}
@@ -171,7 +204,6 @@ def generate_llama32():
 
     # Pass a fixed date_string so strftime_now is not called (the template
     # checks `if not date_string is defined` before calling strftime_now).
-    # This makes the fixture deterministic.
     fixed_ctx = {
         "bos_token": "<|begin_of_text|>",
         "eos_token": "<|eot_id|>",
@@ -192,10 +224,7 @@ def generate_llama32():
             fname = f"{name}_gen{int(add_gen)}.txt"
             save(os.path.join(EXPECTED_DIR, "llama32", fname), out)
 
-    # Also test that raise_exception fires correctly.
-    # Llama calls raise_exception when tools_in_user_message is true but there
-    # is no user message after system-message extraction. Pass a system-only
-    # list so after extraction messages is empty.
+    # Test that raise_exception fires correctly.
     print("  testing raise_exception trigger")
     try:
         ctx = {
@@ -223,8 +252,6 @@ def generate_gemma3():
         "bos_token": "<bos>",
     }
 
-    # Gemma requires strict user/model alternation. system message is allowed
-    # only as the very first message.
     gemma_system_user = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello, how are you?"},

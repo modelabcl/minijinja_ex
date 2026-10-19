@@ -85,13 +85,13 @@ Hub. This option enables:
   feature (`.strip`, `.startswith`, `.split`, `.items`, `.get`, …)
 - `raise_exception(msg)` global function that fails the render with the message
 - `strftime_now(format)` global function that formats the current local time
-- `tojson` filter override that matches Python's `json.dumps` output: compact
-  form adds spaces after `:` and `,`; `tojson(indent=n)` uses n-space
-  indentation
+- `tojson` filter override: compact form adds spaces after `:` and `,`;
+  `tojson(indent=n)` uses n-space indentation; no HTML escaping (matching
+  transformers, which uses `json.dumps` with `ensure_ascii=False`)
 - `trim_blocks` and `lstrip_blocks` enabled (matching the transformers Jinja2
   environment)
-- Template preprocessing: `variable[::-1]` is rewritten to `variable|reverse`
-  (Python reverse-slice syntax not supported by minijinja)
+- `[::-1]` reverse-slice syntax works natively (minijinja 2.x supports step
+  slices)
 
 ```elixir
 chat_template = File.read!("tokenizer_config.json")
@@ -111,12 +111,18 @@ messages = [
 })
 ```
 
-#### Note on `tojson` HTML escaping
+#### Note on `tojson` key ordering
 
-Python's Jinja2 `tojson` HTML-escapes `<`, `>`, `&`, and `'` as unicode
-escapes (`<` etc.). minijinja's `tojson` does not. The outputs are
-byte-for-byte identical when tool definitions and message content contain
-only characters that do not need HTML escaping.
+The `tojson` filter in HF compat mode produces alphabetically sorted keys.
+This is because serde_json (the JSON serializer used by the NIF) uses a
+`BTreeMap` for object keys by default, and Elixir small maps iterate in the
+same alphabetical term order for string keys.
+
+transformers uses `json.dumps` with `sort_keys=False` (insertion order), so
+the canonical transformers output for maps whose keys are not in alphabetical
+order will differ. In practice most tool schemas and message objects have
+string keys that are close to alphabetical, or the template does not depend
+on key ordering.
 
 ### Pipe-Friendly API
 

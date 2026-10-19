@@ -2,8 +2,7 @@ use chrono::Local;
 use minijinja::{Environment, Value};
 use minijinja_contrib::pycompat;
 use rustler::{Atom, NifResult, ResourceArc, Term};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 mod atoms {
@@ -15,16 +14,9 @@ mod atoms {
 
 pub struct EnvResource {
     env: Mutex<Environment<'static>>,
-    hf_compat: AtomicBool,
 }
 
 impl rustler::Resource for EnvResource {}
-
-// Replace Python-style reverse slices used in HF chat templates.
-// `variable[::-1]` is not valid minijinja, but `variable|reverse` is equivalent.
-fn preprocess_template(source: &str) -> String {
-    source.replace("[::-1]", "|reverse")
-}
 
 #[rustler::nif]
 fn render_string(template_source: String, context: Term) -> NifResult<String> {
@@ -48,22 +40,22 @@ fn render_string(template_source: String, context: Term) -> NifResult<String> {
 fn env_new() -> ResourceArc<EnvResource> {
     ResourceArc::new(EnvResource {
         env: Mutex::new(Environment::new()),
-        hf_compat: AtomicBool::new(false),
     })
 }
 
-// Custom tojson filter matching Python's json.dumps behavior:
-// - No indent: compact JSON with space after ':' and ',' (Python default separators)
+// Custom tojson filter matching transformers' behavior:
+// - No indent: compact JSON with space after ':' and ',' (Python's default separators)
 // - indent=n: pretty JSON with n-space indentation
-//
-// Python's Jinja2 tojson uses `sort_keys=True` by default. We match this by
-// using BTreeMap (sorted) when converting Elixir terms to minijinja Values.
+// - No HTML escaping (same as transformers, which uses json.dumps with ensure_ascii=False)
+// - Keys are alphabetically sorted because serde_json uses BTreeMap for Object by default.
+//   Elixir small maps also iterate in alphabetical term order for string keys, so the
+//   key order in tojson output matches the Elixir map's iteration order. This differs from
+//   transformers, which uses sort_keys=False (insertion order). See README.
 fn hf_tojson(value: Value, kwargs: minijinja::value::Kwargs) -> Result<Value, minijinja::Error> {
     let indent: Option<i64> = kwargs.get("indent")?;
     kwargs.assert_all_used()?;
 
     let rv = if let Some(n) = indent {
-        // Pretty-print with n-space indentation.
         let indent_bytes: Vec<u8> = vec![b' '; n as usize];
         let json_val = serde_json::to_value(&value).map_err(|e| {
             minijinja::Error::new(minijinja::ErrorKind::InvalidOperation, e.to_string())
@@ -77,7 +69,6 @@ fn hf_tojson(value: Value, kwargs: minijinja::value::Kwargs) -> Result<Value, mi
         })?;
         String::from_utf8(buf).expect("serde_json output is always UTF-8")
     } else {
-        // Compact with Python-style spaces after ':' and ','.
         let compact = serde_json::to_string(&value).map_err(|e| {
             minijinja::Error::new(minijinja::ErrorKind::InvalidOperation, e.to_string())
         })?;
@@ -135,9 +126,8 @@ fn add_json_spaces(compact: &str) -> String {
 /// - pycompat unknown-method callback (`.strip`, `.startswith`, `.split`, `.items`, …)
 /// - `raise_exception(message)` global function
 /// - `strftime_now(format)` global function
-/// - `tojson` filter override that matches Python's json.dumps (spaces, sort_keys)
+/// - `tojson` filter override matching Python's json.dumps (spaces, no HTML escaping)
 /// - trim_blocks and lstrip_blocks (matching the transformers Jinja2 environment)
-/// - template preprocessing to convert `[::-1]` slices to `|reverse`
 #[rustler::nif]
 fn env_enable_huggingface_compat(resource: ResourceArc<EnvResource>) -> Atom {
     let mut env = resource.env.lock().unwrap();
@@ -165,12 +155,10 @@ fn env_enable_huggingface_compat(resource: ResourceArc<EnvResource>) -> Atom {
         Local::now().format(&fmt).to_string()
     });
 
-    // Override tojson to match Python's json.dumps: compact with spaces,
-    // or pretty with indent=n. Key sorting is handled at the Value level
-    // (BTreeMap in term_to_minijinja_value).
+    // Override tojson to match transformers' json.dumps: compact with spaces,
+    // or pretty with indent=n, no HTML escaping.
     env.add_filter("tojson", hf_tojson);
 
-    resource.hf_compat.store(true, Ordering::Relaxed);
     atoms::ok()
 }
 
@@ -181,12 +169,7 @@ fn env_add_template(
     source: String,
 ) -> NifResult<Atom> {
     let mut env = resource.env.lock().unwrap();
-    let processed = if resource.hf_compat.load(Ordering::Relaxed) {
-        preprocess_template(&source)
-    } else {
-        source
-    };
-    env.add_template_owned(name, processed)
+    env.add_template_owned(name, source)
         .map_err(|e| rustler::Error::Term(Box::new(e.to_string())))?;
     Ok(atoms::ok())
 }
@@ -218,13 +201,7 @@ fn env_render_str(
     let mut env = resource.env.lock().unwrap();
     let temp_name = "__temp_render__";
 
-    let processed = if resource.hf_compat.load(Ordering::Relaxed) {
-        preprocess_template(&source)
-    } else {
-        source
-    };
-
-    env.add_template_owned(temp_name, processed)
+    env.add_template_owned(temp_name, source)
         .map_err(|e| rustler::Error::Term(Box::new(e.to_string())))?;
 
     let template = env
@@ -328,14 +305,12 @@ fn term_to_minijinja_value(term: Term) -> NifResult<Value> {
             Ok(Value::from(values?))
         }
         rustler::TermType::Map => {
-            // Use BTreeMap so keys are sorted alphabetically, matching Jinja2's
-            // tojson default (sort_keys=True).
             let map: HashMap<String, Term> = term.decode()?;
-            let mut sorted: BTreeMap<String, Value> = BTreeMap::new();
+            let mut result = HashMap::new();
             for (key, value) in map {
-                sorted.insert(key, term_to_minijinja_value(value)?);
+                result.insert(key, term_to_minijinja_value(value)?);
             }
-            Ok(Value::from_iter(sorted))
+            Ok(Value::from_iter(result))
         }
         rustler::TermType::Tuple => {
             let tuple: Vec<Term> = term.decode()?;
