@@ -32,21 +32,21 @@ defmodule MinijinjaEx.ChatTemplateTest do
   defp tools do
     [
       %{
-        "type" => "function",
         "function" => %{
-          "name" => "get_weather",
           "description" => "Get current weather for a city",
+          "name" => "get_weather",
           "parameters" => %{
-            "type" => "object",
             "properties" => %{
               "location" => %{
-                "type" => "string",
-                "description" => "City name"
+                "description" => "City name",
+                "type" => "string"
               }
             },
-            "required" => ["location"]
+            "required" => ["location"],
+            "type" => "object"
           }
-        }
+        },
+        "type" => "function"
       }
     ]
   end
@@ -54,21 +54,21 @@ defmodule MinijinjaEx.ChatTemplateTest do
   defp tools_html do
     [
       %{
-        "type" => "function",
         "function" => %{
-          "name" => "html_tool",
           "description" => "Supports <b>bold</b> & 'quoted' text > threshold",
+          "name" => "html_tool",
           "parameters" => %{
-            "type" => "object",
             "properties" => %{
               "query" => %{
-                "type" => "string",
-                "description" => "Search query with <special> & 'chars'"
+                "description" => "Search query with <special> & 'chars'",
+                "type" => "string"
               }
             },
-            "required" => ["query"]
+            "required" => ["query"],
+            "type" => "object"
           }
-        }
+        },
+        "type" => "function"
       }
     ]
   end
@@ -77,13 +77,13 @@ defmodule MinijinjaEx.ChatTemplateTest do
     [
       %{"role" => "user", "content" => "What is the weather in Paris?"},
       %{
-        "role" => "assistant",
         "content" => "",
+        "role" => "assistant",
         "tool_calls" => [
           %{
             "function" => %{
-              "name" => "get_weather",
-              "arguments" => %{"location" => "Paris"}
+              "arguments" => %{"location" => "Paris"},
+              "name" => "get_weather"
             }
           }
         ]
