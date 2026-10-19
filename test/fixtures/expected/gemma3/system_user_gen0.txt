@@ -1,0 +1,4 @@
+<bos><start_of_turn>user
+You are a helpful assistant.
+
+Hello, how are you?<end_of_turn>

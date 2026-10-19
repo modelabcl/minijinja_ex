@@ -1,0 +1,8 @@
+<|im_start|>user
+Hello!<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+Hi there! How can I help you?<|im_end|>

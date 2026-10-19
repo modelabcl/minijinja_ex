@@ -76,6 +76,48 @@ env = MinijinjaEx.new_env(
 )
 ```
 
+### Hugging Face Chat Templates
+
+Use `huggingface_compat: true` to render chat templates from the Hugging Face
+Hub. This option enables:
+
+- Python-compatible string and dict methods via the minijinja-contrib `pycompat`
+  feature (`.strip`, `.startswith`, `.split`, `.items`, `.get`, …)
+- `raise_exception(msg)` global function that fails the render with the message
+- `strftime_now(format)` global function that formats the current local time
+- `tojson` filter override that matches Python's `json.dumps` output: compact
+  form adds spaces after `:` and `,`; `tojson(indent=n)` uses n-space
+  indentation
+- `trim_blocks` and `lstrip_blocks` enabled (matching the transformers Jinja2
+  environment)
+- Template preprocessing: `variable[::-1]` is rewritten to `variable|reverse`
+  (Python reverse-slice syntax not supported by minijinja)
+
+```elixir
+chat_template = File.read!("tokenizer_config.json")
+  |> Jason.decode!()
+  |> Map.fetch!("chat_template")
+
+env = MinijinjaEx.new_env(huggingface_compat: true)
+env = MinijinjaEx.add_template!(env, "chat", chat_template)
+
+messages = [
+  %{"role" => "user", "content" => "Hello!"}
+]
+
+{:ok, prompt} = MinijinjaEx.render(env, "chat", %{
+  "messages" => messages,
+  "add_generation_prompt" => true
+})
+```
+
+#### Note on `tojson` HTML escaping
+
+Python's Jinja2 `tojson` HTML-escapes `<`, `>`, `&`, and `'` as unicode
+escapes (`<` etc.). minijinja's `tojson` does not. The outputs are
+byte-for-byte identical when tool definitions and message content contain
+only characters that do not need HTML escaping.
+
 ### Pipe-Friendly API
 
 ```elixir

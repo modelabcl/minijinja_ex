@@ -1,0 +1,4 @@
+<bos><start_of_turn>user
+Hello!<end_of_turn>
+<start_of_turn>model
+Hi there!<end_of_turn>

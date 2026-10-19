@@ -39,4 +39,7 @@ defmodule MinijinjaEx.NIF do
 
   @spec env_add_global(reference(), String.t(), term()) :: :ok | {:error, String.t()}
   def env_add_global(_env, _name, _value), do: :erlang.nif_error(:nif_not_loaded)
+
+  @spec env_enable_huggingface_compat(reference()) :: :ok
+  def env_enable_huggingface_compat(_env), do: :erlang.nif_error(:nif_not_loaded)
 end

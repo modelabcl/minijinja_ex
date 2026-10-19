@@ -9,6 +9,7 @@ defmodule MinijinjaEx do
   - Pipe-friendly API
   - Structured error handling
   - Configuration options (trim_blocks, lstrip_blocks, keep_trailing_newline)
+  - Hugging Face chat-template compatibility (huggingface_compat)
 
   ## Quick Start
 
@@ -19,6 +20,11 @@ defmodule MinijinjaEx do
       env = MinijinjaEx.new_env(trim_blocks: true)
       env = MinijinjaEx.add_template!(env, "greeting", "Hello {{ name }}!")
       {:ok, result} = MinijinjaEx.render(env, "greeting", %{"name" => "World"})
+
+      # Hugging Face chat templates
+      env = MinijinjaEx.new_env(huggingface_compat: true)
+      env = MinijinjaEx.add_template!(env, "chat", chat_template_string)
+      {:ok, result} = MinijinjaEx.render(env, "chat", %{"messages" => messages, "add_generation_prompt" => true})
 
   """
 
@@ -40,9 +46,16 @@ defmodule MinijinjaEx do
 
   ## Options
 
-    - `:trim_blocks` - When true, removes first newline after block tags
+    - `:trim_blocks` - When true, removes the first newline after a block tag
     - `:lstrip_blocks` - When true, removes leading whitespace before block tags
-    - `:keep_trailing_newline` - When true, keeps trailing newline in output
+    - `:keep_trailing_newline` - When true, keeps the trailing newline in output
+    - `:huggingface_compat` - When true, enables Hugging Face chat-template
+      compatibility: pycompat Python-style string/dict methods (`.strip`,
+      `.startswith`, `.split`, `.items`, etc.), the `raise_exception(msg)` global
+      function, the `strftime_now(format)` global function, the `tojson` filter
+      (via minijinja's `json` feature), and preprocessing of Python-style
+      `[::-1]` reverse slices. Also sets `trim_blocks` and `lstrip_blocks` to
+      match the transformers Jinja2 environment.
 
   ## Examples
 
@@ -52,12 +65,16 @@ defmodule MinijinjaEx do
       iex> env = MinijinjaEx.new_env(trim_blocks: true, lstrip_blocks: true)
       iex> %MinijinjaEx{} = env
 
+      iex> env = MinijinjaEx.new_env(huggingface_compat: true)
+      iex> %MinijinjaEx{} = env
+
   """
   @spec new_env(keyword()) :: env()
   def new_env(opts \\ []) do
     env = %__MODULE__{reference: NIF.env_new()}
 
     env
+    |> maybe_set_option(:huggingface_compat, opts)
     |> maybe_set_option(:trim_blocks, opts)
     |> maybe_set_option(:lstrip_blocks, opts)
     |> maybe_set_option(:keep_trailing_newline, opts)
@@ -73,6 +90,32 @@ defmodule MinijinjaEx do
   defp apply_setter(:trim_blocks, env, value), do: set_trim_blocks(env, value)
   defp apply_setter(:lstrip_blocks, env, value), do: set_lstrip_blocks(env, value)
   defp apply_setter(:keep_trailing_newline, env, value), do: set_keep_trailing_newline(env, value)
+  defp apply_setter(:huggingface_compat, env, true), do: enable_huggingface_compat(env)
+  defp apply_setter(:huggingface_compat, env, _), do: env
+
+  @doc """
+  Enables Hugging Face chat-template compatibility on the environment.
+
+  This enables:
+  - Python-compatible string and dict methods via the pycompat callback
+  - `raise_exception(msg)` global function
+  - `strftime_now(format)` global function
+  - The `tojson` filter (minijinja `json` feature)
+  - `trim_blocks` and `lstrip_blocks` (matching the transformers Jinja2 setup)
+  - Preprocessing of `[::-1]` Python reverse-slice notation in templates
+
+  ## Note on `tojson`
+
+  minijinja's `tojson` does not HTML-escape `<`, `>`, `&`, or `'` the way
+  Jinja2 does. For tool definitions or other content that does not contain
+  those characters, the output is byte-for-byte identical to Python's output.
+
+  """
+  @spec enable_huggingface_compat(env()) :: env()
+  def enable_huggingface_compat(%__MODULE__{reference: ref} = env) do
+    NIF.env_enable_huggingface_compat(ref)
+    env
+  end
 
   @doc """
   Adds a template to the environment.

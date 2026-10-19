@@ -28,12 +28,14 @@ defmodule MinijinjaEx.NIFTest do
     end
 
     test "renders template with boolean values" do
-      assert NIF.render_string("{{ val }}", %{"val" => true}) == "true"
-      assert NIF.render_string("{{ val }}", %{"val" => false}) == "false"
+      # minijinja 2.24+ renders booleans Python-style: True/False
+      assert NIF.render_string("{{ val }}", %{"val" => true}) == "True"
+      assert NIF.render_string("{{ val }}", %{"val" => false}) == "False"
     end
 
     test "renders template with nil value" do
-      assert NIF.render_string("{{ val }}", %{"val" => nil}) == "none"
+      # minijinja 2.24+ renders nil Python-style: None
+      assert NIF.render_string("{{ val }}", %{"val" => nil}) == "None"
     end
 
     test "renders template with list iteration" do
